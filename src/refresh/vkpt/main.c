@@ -243,6 +243,9 @@ vkpt_initialize_all(VkptInitFlags_t init_flags)
 			? (init->initialize() == VK_SUCCESS)
 			: 1;
 		assert(init->is_initialized);
+
+		if (!init->is_initialized)
+		  Com_Error(ERR_FATAL, "Couldn't initialize %s.\n", init->name);
 	}
 
 	if ((VKPT_INIT_DEFAULT & init_flags) == init_flags)
@@ -477,7 +480,7 @@ vk_debug_callback(
 		Com_EPrintf("~~~ ");
 		for (uint32_t i = 0; i < callback_data->cmdBufLabelCount; ++i)
 		{
-			VkDebugUtilsLabelEXT* label = &callback_data->pCmdBufLabels[i];
+			const VkDebugUtilsLabelEXT* label = &callback_data->pCmdBufLabels[i];
 			Com_EPrintf("%s ~ ", label->pLabelName);
 		}
 		Com_EPrintf("\n");
@@ -487,7 +490,7 @@ vk_debug_callback(
 	{
 		for (uint32_t i = 0; i < callback_data->objectCount; ++i)
 		{
-			VkDebugUtilsObjectNameInfoEXT* obj = &callback_data->pObjects[i];
+			const VkDebugUtilsObjectNameInfoEXT* obj = &callback_data->pObjects[i];
 			Com_EPrintf("--- %s %i\n", obj->pObjectName, (int32_t)obj->objectType);
 		}
 	}
@@ -1529,6 +1532,12 @@ static void process_regular_entity(
 		{
 			assert(!"Total entity count overflow");
 			break;
+		}
+
+		if (mesh->idx_offset < 0 || mesh->vertex_offset < 0)
+		{
+			// failed to upload the vertex data - don't instance this mesh
+			continue;
 		}
 
 		uint32_t material_id = fill_model_instance(entity, model, mesh, transform, current_model_instance_index, is_viewer_weapon, is_double_sided);
